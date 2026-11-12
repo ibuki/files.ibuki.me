@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>時報</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+    }
+    #clock {
+      font-size: 18vw;
+      font-variant-numeric: tabular-nums;
+    }
+    button {
+      font-size: 20px;
+      padding: 12px 32px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    #status {
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div id="clock">--:--:--</div>
+  <button id="toggle">開始</button>
+  <div id="status">開始を押すと、毎分0秒に時刻を読み上げます</div>
+
+  <script>
+    const clock = document.getElementById('clock');
+    const toggle = document.getElementById('toggle');
+    const status = document.getElementById('status');
+    let running = false;
+    let lastSpokenMinute = null;
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function timeText(date) {
+      const h = date.getHours();
+      const m = date.getMinutes();
+      const ampm = h < 12 ? '午前' : '午後';
+      const h12 = h % 12;
+      const minute = m === 0 ? 'ちょうど' : `${m}分`;
+      return `${ampm}${h12}時${minute}をお知らせします`;
+    }
+
+    function speak(text) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP';
+      const voice = speechSynthesis.getVoices().find(v => v.lang === 'ja-JP');
+      if (voice) u.voice = voice;
+      speechSynthesis.speak(u);
+    }
+
+    function tick() {
+      const now = new Date();
+      clock.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const minuteKey = Math.floor(now.getTime() / 60000);
+      if (running && now.getSeconds() === 0 && lastSpokenMinute !== minuteKey) {
+        lastSpokenMinute = minuteKey;
+        speak(timeText(now));
+      }
+      setTimeout(tick, 1000 - now.getMilliseconds());
+    }
+
+    toggle.addEventListener('click', () => {
+      running = !running;
+      if (running) {
+        toggle.textContent = '停止';
+        status.textContent = '毎分0秒に時刻を読み上げます';
+        speak(timeText(new Date()).replace('をお知らせします', 'です'));
+      } else {
+        toggle.textContent = '開始';
+        status.textContent = '停止中';
+        speechSynthesis.cancel();
+      }
+    });
+
+    tick();
+  </script>
+</body>
+</html>
